@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <iomanip>
+#include <functional>
 
 using namespace std;
 
@@ -13,66 +14,45 @@ double func(double x){
 }
 
 
-int satisfyBolzano(double a, double b)
-{
-    if (func(a)*func(b) < 0) { return 1; }
-    return 0;
+double derivative(const std::function<double(double)>& func, double x, double h = BASE_PRECISION) {
+    return (func(x + h) - func(x - h)) / (2.0 * h);
 }
 
 
-double falsaPosicao(double a, double b, double precision_e1, double precision_e2)
+double newtonRaphson(double x0, double precision_e1, double precision_e2)
 {
-    double fa = func(a);
-    double fb = func(b);
+    double x = nan("");
+    double fx0 = func(x0);
+    if (std::abs(fx0) < precision_e1) { return x0; }
 
-    if ( std::abs(a-b) < precision_e1 )
+    while (1)
     {
-        if ( std::abs(fa) < precision_e2 ) { return a; }
-        else { return b; }
-    }
+        double fx0_d = derivative(func, x0);
 
-    int counter = 1;
-    double x;
-
-    cout << "\n" << string(68, '-') << endl;
-    cout << left 
-         << setw(5)  << "i"
-         << setw(12) << "m"
-         << setw(14) << "f(m)"
-         << setw(12) << "|b - a|" 
-         << endl;
-    cout << string(68, '-') << endl;
-    do
-    {
-        double fa = func(a);
-        double fb = func(b);
-    
-        x = (a*fb - b*fa)/(fb-fa);
-        double fx = func(x);
+        if (std::abs(fx0_d) < 1e-12) 
+        {
+            cerr << "derivada nula ou proxima de zero" << endl;
+            return x;
+        }
         
-        cout << left 
-             << setw(5)  << counter
-             << setw(12) << fixed << setprecision(6) << x
-             << setw(14) << scientific << setprecision(3) << fx
-             << setw(12) << fixed << setprecision(6) << std::abs(b - a)
-             << endl;
+        x = x0 - fx0/fx0_d;
+        cout << x << endl;
+        double fx = func(x);
 
-        if (std::abs(fx) < precision_e2) { break; }
-
-        if ( satisfyBolzano(a, x) ) { b = x; }
-        else { a = x; }
-
-        if (std::abs(a-b) < precision_e1) { break; }
-        counter++;
-    } while (1);
-
+        if (std::abs(fx) < precision_e1 || std::abs(x - x0) < precision_e2) { break; }
+        x0  = x;
+        fx0 = fx;
+    }
+    
     return x;
 }
 
+
+
 int main()
 {
-    cout << "tentando aproximar a funcao pelo metodo da bissecao com e = " << BASE_PRECISION << endl;
-    double res = falsaPosicao(0, 1, BASE_PRECISION, BASE_PRECISION);
+    cout << "tentando aproximar a funcao pelo metodo de newton-raphson com e = " << BASE_PRECISION << endl;
+    double res = newtonRaphson(1, BASE_PRECISION, BASE_PRECISION);
     
     if (isnan(res)) {
         cout << "intervalo invalido";
