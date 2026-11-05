@@ -1,6 +1,5 @@
 import numpy as np
 
-import src.sistemas_lineares.fatoracao_lu as slfu
 import src.sistemas_lineares.eliminacao_gauss as sleg
 
 A = np.array([
@@ -11,8 +10,10 @@ A = np.array([
 
 b = np.array([12, 14, 22], dtype=float)
 
-X, c = sleg.eliminacao_gauss(A)
+matriz, res, L, perm = sleg.eliminacao_gauss(A,b)
 
-print(X)
+print(matriz)
+print(res)
 
-print(c)
+x = sleg.retrossubstituicao(matriz, res)
+print(x)
