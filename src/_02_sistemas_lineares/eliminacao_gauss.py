@@ -4,7 +4,7 @@ import numpy as np
 # Retorna uma tupla contendo
 #   A matriz resultante
 #   Uma matriz com os multiplicadores
-def eliminacao_gauss(matriz, vetor_resultado=None) -> tuple:
+def eliminacao_gauss(matriz, vetor_resultado=None):
     
     # Verificações na Matriz A
     A = np.array(matriz, dtype=float, copy=True)
@@ -92,4 +92,9 @@ def retrossubstituicao(U, b):
         soma = np.dot(U[i, i + 1:], x[i + 1:])
         x[i] = (b[i] - soma) / U[i, i]
 
+    return x
+
+def gauss(A, b):
+    U, b, L, p = eliminacao_gauss(A, b)
+    x = retrossubstituicao(U, b)
     return x

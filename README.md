@@ -8,18 +8,18 @@
 
 ### Sistemas Lineares
 - [x] Eliminação de Gauss
-- [ ] Fatoração LU
-- [ ] Gauss-Jacob
-- [ ] Gauss-Seidl
+- [x] Fatoração LU
+- [x] Gauss-Jacob
+<!-- - [ ] Gauss-Seidl (*) -->
 
 ### Ajuste de Curvas
-- [ ] Polinomial
+- [x] Polinomial
 
 ### Interpolação Polinomial
-- [ ] Definição
-- [ ] Polinômio de Newton
-- [ ] Polinômio de Lagrange (*)
+- [x] Definição
+- [x] Polinômio de Newton
+<!-- - [ ] Polinômio de Lagrange (*) -->
 
 ### Integração Numérica
-- [ ] Trapézio
-- [ ] 1 Simpson
+- [x] Trapézio
+- [x] 1 Simpson
