@@ -1,8 +1,8 @@
 import numpy as np
 
-def simpson(func, a: int, b: int, n: int):
-    if n < 2 or n%2 != 0:
-        raise ValueError("n precisa ser par e maior ou igual que 2.")
+def simpson(func, a, b, n: int):
+    if not isinstance(n, (int, np.integer)) or n < 2 or n % 2 != 0:
+        raise ValueError("n deve ser um inteiro par >= 2.")
     
     if (a == b):
         return 0.0
@@ -13,7 +13,7 @@ def simpson(func, a: int, b: int, n: int):
         a, b = b, a
         sinal = -1
     
-    h = (b-a) / 2
+    h = (b-a) / n
     soma = func(a) + func(b)
     
     for i in range(1, n):

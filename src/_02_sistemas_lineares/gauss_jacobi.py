@@ -30,8 +30,12 @@ def iteracao(A, b, x_atual):
     return x_novo
 
 #
-def gauss_jacob(A, b, x_inicial, tolerancia=1e-10, max_iters=100):
-    
+def gauss_jacobi(A, b, x_inicial, tolerancia=1e-10, max_iters=100):
+
+    if not(tolerancia > 0):
+        print(f"A tolerância deve ser positiva.")
+        return
+
     A = verificar_matriz(A)
     b = np.asarray(b, dtype=float)
     
@@ -44,14 +48,15 @@ def gauss_jacob(A, b, x_inicial, tolerancia=1e-10, max_iters=100):
     if x.shape != (n, ):
         raise ValueError("x_inicial precisa ter o mesmo tamanho que b.")
     
-    for iter in range(1, max_iters+1):
+    for i in range(1, max_iters+1):
         x_novo = iteracao(A, b, x)
         
         erro = np.linalg.norm(x_novo-x, ord=np.inf)
         
         if erro < tolerancia:
-            return x_novo, iteracao, erro
+            return x_novo, i, erro
         
         x = x_novo
-    
+
+    print(f"Atingiu o número máximo de iterações: {max_iters}")
     return x, max_iters, erro

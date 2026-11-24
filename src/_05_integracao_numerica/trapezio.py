@@ -2,15 +2,18 @@
 # da fórmula vista em sala de aula.
 def trapezio(func, a: float, b: float, n: int):
     if n < 1:
-        return
+        raise ValueError("Entrada inválida. O valor de n é menor que 1.")
     
     if a == b:
-        return
+        return 0.0
+
+    sinal = 1
     
     if a > b:
         c = a
         a = b
         b = c
+        sinal = -1
 
     h = (b - a) / n
 
@@ -20,7 +23,7 @@ def trapezio(func, a: float, b: float, n: int):
         func(b)
     )
     
-    return integral
+    return integral * sinal
 
 # Recebe os dados tabelados. Os dados não precisam estar
 # igualmente espaçados. Calcula iterativamente a integral.

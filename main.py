@@ -5,8 +5,17 @@ import math
 from dataclasses import dataclass
 from typing import Callable
 
-# Imports de funções
+import numpy as np
+
 from src._02_sistemas_lineares.eliminacao_gauss import gauss
+from src._02_sistemas_lineares.fatoracao_lu import fatoracao_lu
+from src._02_sistemas_lineares.gauss_jacobi import gauss_jacobi
+from src._03_ajuste_curvas.mmq import ajustar_curva
+from src._04_interpolacao.definicao import definicao
+from src._04_interpolacao.newton import diferencas_divididas, avaliar_newton
+from src._05_integracao_numerica.trapezio import trapezio, trapezio_tabelado
+from src._05_integracao_numerica.simpson import simpson, simpson_tabelado
+
 
 @dataclass(frozen=True)
 class MetodoItem:
@@ -35,6 +44,28 @@ def ler_int(mensagem: str, minimo: int | None = None) -> int:
             print("  [!] Entrada inválida. Digite um inteiro.")
 
 
+def escolher_opcao(titulo: str, opcoes: list[str]) -> int:
+    print(f"\n{titulo}")
+    for i, opcao in enumerate(opcoes, start=1):
+        print(f"  {i}) {opcao}")
+    print("  0) Voltar")
+    while True:
+        escolha = ler_int("Escolha: ", minimo=0)
+        if escolha <= len(opcoes):
+            return escolha - 1
+        print("  [!] Opção inexistente.")
+
+
+def escolher_dados(titulo: str, exemplos: dict[str, object]):
+    nomes = list(exemplos)
+    escolha = escolher_opcao(titulo, [*nomes, "Digitar meus próprios dados"])
+    if escolha == -1:
+        return None
+    if escolha < len(nomes):
+        return exemplos[nomes[escolha]]
+    return "custom"
+
+
 def ler_funcao(mensagem: str = "Digite f(x) (ex: x**3 - x - 2): ") -> Callable[[float], float]:
     ambiente = {k: getattr(math, k) for k in dir(math) if not k.startswith("_")}
     ambiente["abs"] = abs
@@ -52,7 +83,6 @@ def ler_funcao(mensagem: str = "Digite f(x) (ex: x**3 - x - 2): ") -> Callable[[
                 escopo["x"] = x
                 return float(eval(_code, {"__builtins__": {}}, escopo))
 
-            f(1.0)
             return f
         except Exception as erro:
             print(f"  [!] Expressão inválida ({erro}). Tente novamente.")
@@ -60,8 +90,8 @@ def ler_funcao(mensagem: str = "Digite f(x) (ex: x**3 - x - 2): ") -> Callable[[
 
 def ler_sistema_linear() -> tuple[list[list[float]], list[float]]:
     n = ler_int("Dimensão n do sistema: ", minimo=1)
-    print("Digite cada linha da matriz A separada por espaço:")
     A: list[list[float]] = []
+    print("Digite cada linha da matriz A separada por espaço:")
     for i in range(n):
         while True:
             partes = input(f"  Linha {i + 1}: ").strip().replace(",", ".").split()
@@ -73,53 +103,190 @@ def ler_sistema_linear() -> tuple[list[list[float]], list[float]]:
                 break
             except ValueError:
                 print("  [!] Use apenas números.")
-
     print("Digite o vetor b:")
     b = [ler_float(f"  b[{i + 1}]: ") for i in range(n)]
     return A, b
 
 
-# --- Handlers dos métodos ---
+def obter_sistema():
+    exemplos = {
+        "A=[[4, 1, 1], [2, 5, 1], [1, 1, 3]], b=[6, 8, 4]": ([[4, 1, 1], [2, 5, 1], [1, 1, 3]], [6, 8, 4]),
+        "A=[[0, 2], [1, 3]], b=[4, 7] (pivotamento)": ([[0, 2], [1, 3]], [4, 7]),
+    }
+    dados = escolher_dados("Sistema linear", exemplos)
+    if dados == "custom":
+        return ler_sistema_linear()
+    return dados
+
+
+def ler_pontos() -> tuple[list[float], list[float]]:
+    n = ler_int("Quantidade de pontos: ", minimo=1)
+    x, y = [], []
+    for i in range(n):
+        print(f"Ponto {i + 1}:")
+        x.append(ler_float("  x = "))
+        y.append(ler_float("  y = "))
+    return x, y
+
+
+def obter_pontos(titulo: str, exemplos: dict[str, list[tuple[float, float]]]):
+    dados = escolher_dados(titulo, exemplos)
+    if dados == "custom":
+        return ler_pontos()
+    if dados is None:
+        return None
+    return [p[0] for p in dados], [p[1] for p in dados]
+
 
 def run_eliminacao_gauss() -> None:
-    print("\nEliminação de Gauss\n")
-    A, b = ler_sistema_linear()
-    solucao = gauss(A, b)
-    print(f"A = {A}        \n"
-          f"b = {b}        \n" 
-          f"Sol: {solucao} \n")
+    dados = obter_sistema()
+    if dados is None:
+        return
+    A, b = dados
+    print(f"\nA = {A}\nb = {b}\nSolução: {gauss(A, b)}")
 
 
 def run_fatoracao_lu() -> None:
-    print("\n=== Fatoração LU ===\n")
-    A, b = ler_sistema_linear()
-    # L, U, x = fatoracao_lu(A, b)
-    print("\n[TODO] Conectar fatoracao_lu(A, b) de src/_02_sistemas_lineares/fatoracao_lu.py")
-    print(f"A = {A}\nb = {b}")
+    dados = obter_sistema()
+    if dados is None:
+        return
+    A, b = dados
+    x, P, L, U = fatoracao_lu(A, b)
+    print(f"\nSolução: {x}\nP =\n{P}\nL =\n{L}\nU =\n{U}")
 
 
-def run_exemplo_raiz() -> None:
-    print("\n=== Método de Raízes ===\n")
-    f = ler_funcao()
-    a = ler_float("Limite a: ")
-    b = ler_float("Limite b: ")
-    tol = ler_float("Tolerância (ex: 1e-6): ")
-    print(f"\n[TODO] Conectar método de src/_01_raizes/ | f({a})={f(a):.6g}, f({b})={f(b):.6g}, tol={tol}")
+def run_gauss_jacobi() -> None:
+    dados = obter_sistema()
+    if dados is None:
+        return
+    A, b = dados
+    x0 = [0.0] * len(b)
+    tolerancia = ler_float("Tolerância: ")
+    max_iters = ler_int("Máximo de iterações: ", minimo=1)
+    x, iteracoes, erro = gauss_jacobi(A, b, x0, tolerancia, max_iters)
+    print(f"\nSolução aproximada: {x}\nIterações: {iteracoes}\nErro: {erro}")
+
+
+def run_mmq() -> None:
+    dados = obter_pontos("Dados para mínimos quadrados", {
+        "Pontos [(1, 2), (2, 3), (3, 5), (4, 4), (5, 6)]": [(1, 2), (2, 3), (3, 5), (4, 4), (5, 6)],
+    })
+    if dados is None:
+        return
+    x, y = dados
+    maior_grau = len(np.unique(x)) - 1
+    if maior_grau < 0:
+        raise ValueError("Informe ao menos um ponto.")
+    print(f"\nCom esses dados, escolha um grau entre 0 e {maior_grau}.")
+    while True:
+        grau = ler_int("Grau do polinômio: ", minimo=0)
+        if grau <= maior_grau:
+            break
+        print(f"  [!] Grau incompatível: há {len(np.unique(x))} valores de x distintos; use um grau de 0 a {maior_grau}.")
+    coeficientes = ajustar_curva(grau, np.asarray(x), np.asarray(y))
+    print(f"\nCoeficientes (maior para menor potência): {coeficientes}")
+
+
+def run_interpolacao_definicao() -> None:
+    dados = obter_pontos("Pontos para interpolação", {
+        "Pontos [(-1, 0), (0, 1), (1, 2), (2, 9)]": [(-1, 0), (0, 1), (1, 2), (2, 9)],
+        "Pontos [(0, 1), (1, 2), (2, 5)]": [(0, 1), (1, 2), (2, 5)],
+    })
+    if dados is None:
+        return
+    x, y = dados
+    coeficientes = definicao(x, y)
+    print(f"\nCoeficientes (potências crescentes): {coeficientes}")
+
+
+def run_interpolacao_newton() -> None:
+    dados = obter_pontos("Pontos para interpolação", {
+        "Pontos [(-1, 0), (0, 1), (1, 2), (2, 9)]": [(-1, 0), (0, 1), (1, 2), (2, 9)],
+        "Pontos [(0, 1), (1, 2), (2, 5)]": [(0, 1), (1, 2), (2, 5)],
+    })
+    if dados is None:
+        return
+    x, y = dados
+    coeficientes = diferencas_divididas(x, y)
+    print(f"\nCoeficientes de Newton: {coeficientes}")
+    print(f"Valor interpolado no ponto médio: {avaliar_newton(x, coeficientes, (min(x) + max(x)) / 2):.8g}")
+    from src._04_interpolacao.newton import plotar_interpolacao
+    plotar_interpolacao(x, y, coeficientes)
+
+
+def escolher_funcao_integracao():
+    exemplos = {
+        "f(x) = x**2": lambda x: x**2,
+        "f(x) = sin(x)": math.sin,
+        "f(x) = exp(x)": math.exp,
+    }
+    dados = escolher_dados("Função a integrar", exemplos)
+    if dados is None:
+        return None
+    return ler_funcao() if dados == "custom" else dados
+
+
+def run_trapezio() -> None:
+    origem = escolher_opcao("Dados para trapézios", ["Integrar uma função", "Usar pontos tabelados"])
+    if origem == -1:
+        return
+    if origem == 0:
+        func = escolher_funcao_integracao()
+        if func is None:
+            return
+        a = ler_float("Limite a: ")
+        b = ler_float("Limite b: ")
+        n = ler_int("Número de subintervalos: ", minimo=1)
+        print(f"\nIntegral aproximada: {trapezio(func, a, b, n):.12g}")
+        return
+    valores = escolher_dados("Pontos tabelados", {
+        "Pontos [(0, 0), (0.1, 0.2), (0.4, 0.8), (0.7, 1.4), (1, 2)]": [(0, 0), (0.1, 0.2), (0.4, 0.8), (0.7, 1.4), (1, 2)],
+        "Pontos [(0, 1), (0.5, 1.25), (1, 2)]": [(0, 1), (0.5, 1.25), (1, 2)],
+    })
+    if valores == "custom":
+        x, y = ler_pontos()
+        valores = list(zip(x, y))
+    if valores is not None:
+        print(f"\nIntegral aproximada: {trapezio_tabelado(valores):.12g}")
+
+
+def run_simpson() -> None:
+    origem = escolher_opcao("Dados para Simpson 1/3", ["Integrar uma função", "Usar pontos tabelados"])
+    if origem == -1:
+        return
+    if origem == 0:
+        func = escolher_funcao_integracao()
+        if func is None:
+            return
+        a = ler_float("Limite a: ")
+        b = ler_float("Limite b: ")
+        while True:
+            n = ler_int("Número par de subintervalos: ", minimo=2)
+            if n % 2 == 0:
+                break
+            print("  [!] n deve ser par.")
+        print(f"\nIntegral aproximada: {simpson(func, a, b, n):.12g}")
+        return
+    valores = escolher_dados("Pontos tabelados (número ímpar e espaçamento uniforme)", {
+        "Pontos [(0, 0), (0.25, 0.0625), (0.5, 0.25), (0.75, 0.5625), (1, 1)]": [(0, 0), (0.25, 0.0625), (0.5, 0.25), (0.75, 0.5625), (1, 1)],
+        "Pontos [(0, 1), (0.5, 1.25), (1, 2)]": [(0, 1), (0.5, 1.25), (1, 2)],
+    })
+    if valores == "custom":
+        x, y = ler_pontos()
+        valores = list(zip(x, y))
+    if valores is not None:
+        print(f"\nIntegral aproximada: {simpson_tabelado(valores):.12g}")
 
 
 OPCOES: list[MetodoItem] = [
-    MetodoItem("01. Raízes", "Bisseção", run_exemplo_raiz),
-    MetodoItem("01. Raízes", "Falsa Posição", run_exemplo_raiz),
-    MetodoItem("01. Raízes", "Newton-Raphson", run_exemplo_raiz),
-    MetodoItem("01. Raízes", "Secantes", run_exemplo_raiz),
     MetodoItem("02. Sistemas Lineares", "Eliminação de Gauss", run_eliminacao_gauss),
     MetodoItem("02. Sistemas Lineares", "Fatoração LU", run_fatoracao_lu),
-    MetodoItem("02. Sistemas Lineares", "Gauss-Jacob", run_fatoracao_lu),
-    MetodoItem("03. Ajuste de Curvas", "Mínimos Quadrados", run_fatoracao_lu),
-    MetodoItem("04. Interpolação Polinomial", "Definição", run_fatoracao_lu),
-    MetodoItem("04. Interpolação Polinomial", "Polinômio de Newton", run_fatoracao_lu),
-    MetodoItem("05. Integração Numérica", "Regra dos Trapézios", run_fatoracao_lu),
-    MetodoItem("05. Integração Numérica", "1/3 de Simpson", run_fatoracao_lu),
+    MetodoItem("02. Sistemas Lineares", "Gauss-Jacobi", run_gauss_jacobi),
+    MetodoItem("03. Ajuste de Curvas", "Mínimos Quadrados", run_mmq),
+    MetodoItem("04. Interpolação Polinomial", "Definição", run_interpolacao_definicao),
+    MetodoItem("04. Interpolação Polinomial", "Polinômio de Newton", run_interpolacao_newton),
+    MetodoItem("05. Integração Numérica", "Regra dos Trapézios", run_trapezio),
+    MetodoItem("05. Integração Numérica", "1/3 de Simpson", run_simpson),
     MetodoItem("Sistema", "Sair", lambda: None),
 ]
 
@@ -128,40 +295,25 @@ def _menu_curses(stdscr: curses.window) -> int | None:
     curses.curs_set(0)
     stdscr.keypad(True)
     idx = 0
-
     while True:
         stdscr.clear()
         altura, largura = stdscr.getmaxyx()
-
         titulo = "MÉTODOS NUMÉRICOS"
         subtitulo = "Use ↑ / ↓ para navegar, ENTER para selecionar, ESC ou q para sair"
-        stdscr.addstr(0, 2, titulo[: largura - 4], curses.A_BOLD)
+        stdscr.addstr(0, 2, titulo[:largura - 4], curses.A_BOLD)
         if altura > 1:
-            stdscr.addstr(1, 2, subtitulo[: largura - 4], curses.A_DIM)
-
-        linha = 3
-        categoria_atual = ""
-
-        for i, item in enumerate(OPCOES):
-            if item.categoria != categoria_atual:
-                categoria_atual = item.categoria
-                if linha < altura - 1:
-                    stdscr.addstr(linha, 2, f"[{categoria_atual}]"[: largura - 4], curses.A_BOLD)
-                    linha += 1
-
-            if linha >= altura - 1:
-                break
-
+            stdscr.addstr(1, 2, subtitulo[:largura - 4], curses.A_DIM)
+        itens_visiveis = max(1, altura - 4)
+        inicio = max(0, min(idx - itens_visiveis // 2, len(OPCOES) - itens_visiveis))
+        fim = min(len(OPCOES), inicio + itens_visiveis)
+        for linha, i in enumerate(range(inicio, fim), start=3):
+            item = OPCOES[i]
             marcador = "▶ " if i == idx else "  "
-            texto = f"{marcador}{item.nome}"[: largura - 5]
-            # A_REVERSE deixa a linha sombreada/destacada
+            texto = f"{marcador}[{item.categoria}] {item.nome}"[:largura - 5]
             estilo = curses.A_REVERSE | curses.A_BOLD if i == idx else curses.A_NORMAL
             stdscr.addstr(linha, 4, texto, estilo)
-            linha += 1
-
         stdscr.refresh()
         tecla = stdscr.getch()
-
         if tecla == curses.KEY_UP:
             idx = (idx - 1) % len(OPCOES)
         elif tecla == curses.KEY_DOWN:
@@ -177,7 +329,6 @@ def main() -> None:
         try:
             selecionado = curses.wrapper(_menu_curses)
         except curses.error:
-            # Fallback caso rode em terminal sem suporte a curses (ex: alguns terminais no Windows)
             for i, item in enumerate(OPCOES, start=1):
                 print(f"{i}) [{item.categoria}] {item.nome}")
             escolha = ler_int("Escolha o número: ", minimo=1)
@@ -188,13 +339,16 @@ def main() -> None:
             break
 
         print("\033[2J\033[H", end="")
-        try:
-            OPCOES[selecionado].acao()
-        except KeyboardInterrupt:
-            print("\n[!] Operação cancelada.")
-        except Exception as erro:
-            print(f"\n[!] Erro: {erro}")
-
+        while True:
+            try:
+                OPCOES[selecionado].acao()
+                break
+            except KeyboardInterrupt:
+                print("\n[!] Operação cancelada.")
+                break
+            except Exception as erro:
+                print(f"\n[!] Erro nos dados: {erro}")
+                print("Digite os dados novamente. Pressione Ctrl+C para cancelar.")
         input("\nPressione ENTER para voltar ao menu...")
 
 
