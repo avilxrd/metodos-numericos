@@ -5,11 +5,18 @@ from utils import resolver_triangular_superior, resolver_triangular_inferior
 # Fatora a matriz original nas matrizes L (lower), U (upper) e P
 # Estratégia de pivotamento: pivotamento parcial.
 def fatorar_lu(A, tolerancia=1e-12):
-    A = np.array(A, dtype=float)
-    n = A.shape[0]
+    A = np.asarray(A, dtype=float)
     
-    if A.ndim != 2 or A.shape[1] != n:
+    if A.ndim != 2 or A.shape[0] != A.shape[1]:
         raise ValueError("A matriz precisa ser quadrada.")
+    if A.shape[0] == 0:
+        raise ValueError("A matriz não pode ser vazia.")
+    if not np.isfinite(A).all():
+        raise ValueError("A matriz deve conter apenas valores finitos.")
+    if not np.isfinite(tolerancia) or tolerancia <= 0:
+        raise ValueError("A tolerância deve ser finita e positiva.")
+
+    n = A.shape[0]
     
     U = A.copy()
     L = np.eye(n)
@@ -18,7 +25,7 @@ def fatorar_lu(A, tolerancia=1e-12):
     for col in range(n):
         linha_pivo = col + np.argmax(np.abs(U[col:, col]))
         
-        if abs(U[linha_pivo, col]) < tolerancia:
+        if abs(U[linha_pivo, col]) <= tolerancia:
             raise ValueError("A matriz é singular ou quase singular.")
         
         if linha_pivo != col:
@@ -38,7 +45,11 @@ def fatorar_lu(A, tolerancia=1e-12):
 # Interface para a execução completa do algorítmo.
 def fatoracao_lu(A, b):
     P, L, U = fatorar_lu(A)
-    b       = np.array(b, dtype=float)
+    b = np.asarray(b, dtype=float)
+    if b.ndim != 1 or b.size != P.shape[0]:
+        raise ValueError("b deve ter um valor para cada linha de A.")
+    if not np.isfinite(b).all():
+        raise ValueError("b deve conter apenas valores finitos.")
     
     y = resolver_triangular_inferior(L, P@b)
     x = resolver_triangular_superior(U, y)

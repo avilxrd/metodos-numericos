@@ -18,6 +18,15 @@ def montar_matriz(x: list[float]) -> np.ndarray:
 # Monta a matriz, calcula os coeficientes
 # utilizando o método de Gauss implementado.
 def definicao(x, y):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    if x.ndim != 1 or y.ndim != 1:
+        raise ValueError("x e y devem ser vetores.")
+    if x.size == 0 or x.size != y.size:
+        raise ValueError("x e y devem ter o mesmo tamanho não nulo.")
+    if not np.isfinite(x).all() or not np.isfinite(y).all():
+        raise ValueError("Os pontos devem conter apenas valores finitos.")
     if len(np.unique(x)) != len(x):
         raise ValueError("Os valores de x devem ser distintos.")
 

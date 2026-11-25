@@ -7,9 +7,15 @@ def verificar_matriz(A):
     
     if A.ndim != 2 or A.shape[0] != A.shape[1]:
         raise ValueError("A matriz deve ser quadrada.")
+
+    if A.shape[0] == 0:
+        raise ValueError("A matriz não pode ser vazia.")
+
+    if not np.isfinite(A).all():
+        raise ValueError("A matriz deve conter apenas valores finitos.")
     
-    if np.any(np.diag(A) == 0):
-        raise ValueError("A diagonal de A não pode conter zeros.")
+    if np.any(np.isclose(np.diag(A), 0.0, atol=1e-12)):
+        raise ValueError("A diagonal de A não pode conter valores nulos ou muito próximos de zero.")
     
     return A
 
@@ -35,22 +41,26 @@ def iteracao(A, b, x_atual):
 
 #
 def gauss_jacobi(A, b, x_inicial, tolerancia=1e-10, max_iters=100):
-
-    if not(tolerancia > 0):
-        print(f"A tolerância deve ser positiva.")
-        return
+    if not np.isfinite(tolerancia) or tolerancia <= 0:
+        raise ValueError("A tolerância deve ser finita e positiva.")
+    if isinstance(max_iters, (bool, np.bool_)) or not isinstance(max_iters, (int, np.integer)) or max_iters < 1:
+        raise ValueError("max_iters deve ser um inteiro positivo.")
 
     A = verificar_matriz(A)
     b = np.asarray(b, dtype=float)
     
     if b.ndim != 1 or len(b) != A.shape[0]:
         raise ValueError("O vetor b precisa ter um valor para cada linha de A.")
+    if not np.isfinite(b).all():
+        raise ValueError("O vetor b deve conter apenas valores finitos.")
     
     n = len(b)
     x = np.zeros(n) if x_inicial is None else np.asarray(x_inicial, dtype=float)
     
     if x.shape != (n, ):
         raise ValueError("x_inicial precisa ter o mesmo tamanho que b.")
+    if not np.isfinite(x).all():
+        raise ValueError("x_inicial deve conter apenas valores finitos.")
     
     for i in range(1, max_iters+1):
         x_novo = iteracao(A, b, x)
