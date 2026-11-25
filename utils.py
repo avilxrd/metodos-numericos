@@ -51,7 +51,6 @@ def _salvar_e_mostrar_grafico(fig, nome: str) -> None:
     plt.close(fig)
 
 def plotar_ajuste_mmq(x, y, coeficientes) -> None:
-    """Exibe os pontos e o polinômio calculado por mínimos quadrados."""
     fig, ax = plt.subplots()
     x_curva = np.linspace(min(x), max(x), 100)
     y_curva = np.polyval(coeficientes, x_curva)
@@ -65,7 +64,6 @@ def plotar_ajuste_mmq(x, y, coeficientes) -> None:
     _salvar_e_mostrar_grafico(fig, "mmq")
 
 def plotar_interpolacao_definicao(x, y, coeficientes) -> None:
-    """Exibe os pontos e o polinômio interpolador por definição."""
     fig, ax = plt.subplots()
     x_curva = np.linspace(min(x), max(x), 100)
     y_curva = np.polyval(np.asarray(coeficientes)[::-1], x_curva)
@@ -79,7 +77,6 @@ def plotar_interpolacao_definicao(x, y, coeficientes) -> None:
     _salvar_e_mostrar_grafico(fig, "interpol_def")
 
 def plotar_interpolacao_newton(x, y, coeficientes) -> None:
-    """Exibe os pontos e o polinômio interpolador de Newton."""
     x = np.asarray(x, dtype=float)
     coeficientes = np.asarray(coeficientes, dtype=float)
     fig, ax = plt.subplots()
@@ -97,7 +94,6 @@ def plotar_interpolacao_newton(x, y, coeficientes) -> None:
     _salvar_e_mostrar_grafico(fig, "interpol_newton")
 
 def plotar_trapezio(func, a: float, b: float, n: int) -> None:
-    """Exibe a função, as aproximações lineares e as áreas dos trapézios."""
     fig, ax = plt.subplots()
     if a == b:
         ax.scatter([a], [func(a)], color="C0", label="Ponto no intervalo")
@@ -124,7 +120,6 @@ def plotar_trapezio(func, a: float, b: float, n: int) -> None:
     _salvar_e_mostrar_grafico(fig, "trapezio")
 
 def plotar_trapezio_tabelado(valores) -> None:
-    """Exibe pontos tabelados e áreas dos trapézios consecutivos."""
     x, y = np.asarray(valores, dtype=float).T
     fig, ax = plt.subplots()
     ax.plot(x, y, "o--", color="C0", label="Pontos tabelados")
@@ -159,7 +154,6 @@ def _plotar_parabolas_simpson(x, y, func=None):
     return fig, ax
 
 def plotar_simpson(func, a, b, n: int) -> None:
-    """Exibe a função e as parábolas quadráticas da regra 1/3."""
     if a == b:
         fig, ax = plt.subplots()
         ax.scatter([a], [func(a)], color="C0", label="Ponto no intervalo")
@@ -177,7 +171,6 @@ def plotar_simpson(func, a, b, n: int) -> None:
     _salvar_e_mostrar_grafico(fig, "simpson")
 
 def plotar_simpson_tabelado(valores) -> None:
-    """Exibe pontos tabelados e as parábolas da regra 1/3 de Simpson."""
     x, y = np.asarray(valores, dtype=float).T
     fig, ax = _plotar_parabolas_simpson(x, y)
     ax.set_title("Regra 1/3 de Simpson com pontos tabelados")
