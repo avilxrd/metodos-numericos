@@ -57,16 +57,3 @@ def newton(x, y):
     plotar_interpolacao(x, y, coeficientes)
 
     return coeficientes
-
-# Interface de teste.
-def main():
-    x = [-1, 0, 1, 2]
-    y = [0, 1, 2, 9]
-
-    coeficientes = newton(x, y)
-
-    print("Coeficientes de Newton:", coeficientes)
-
-
-if __name__ == "__main__":
-    main()

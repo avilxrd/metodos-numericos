@@ -1,5 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
+#
 def simpson(func, a, b, n: int):
     if not isinstance(n, (int, np.integer)) or n < 2 or n % 2 != 0:
         raise ValueError("n deve ser um inteiro par >= 2.")
@@ -47,18 +49,3 @@ def simpson_tabelado(valores):
     soma += 2 * np.sum(y[2:-1:2])
 
     return (h / 3) * soma
-
-def main():
-    dados = [
-        (0.00, 0.0000),
-        (0.25, 0.0625),
-        (0.50, 0.2500),
-        (0.75, 0.5625),
-        (1.00, 1.0000),
-    ]
-
-    integral = simpson_tabelado(dados)
-    print(f"Integral: {integral}")
-
-if __name__ == "__main__":
-    main()

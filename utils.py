@@ -15,7 +15,7 @@ def resolver_triangular_inferior(L, b):
     for i in range(n):
         soma = sum(L[i, j] * x[j] for j in range(i))
         
-        if np.isclose(L[i, i], 0.0, atol=1e-12, rtol=0.0):
+        if np.isclose(L[i, i], 0.0, atol=1e-12):
             raise ValueError("Pivô nulo ou muito próximo de zero.")
         
         x[i] = (b[i] - soma) / L[i, i]
@@ -37,7 +37,7 @@ def resolver_triangular_superior(U, b):
     for i in range(n - 1, -1, -1):
         soma = sum(U[i, j] * x[j] for j in range(i + 1, n))
         
-        if np.isclose(U[i, i], 0.0, atol=1e-12, rtol=0.0):
+        if np.isclose(U[i, i], 0.0, atol=1e-12):
             raise ValueError("Pivô nulo ou muito próximo de zero.")
         
         x[i] = (b[i] - soma) / U[i, i]

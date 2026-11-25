@@ -71,6 +71,7 @@ def ler_funcao(mensagem: str = "Digite f(x) (ex: x**3 - x - 2): ") -> Callable[[
     ambiente["abs"] = abs
 
     while True:
+        print("Use x, operações + - * / **, abs() e funções de math como sin(), cos(), exp() e sqrt().")
         expr = input(mensagem).strip()
         try:
             codigo = compile(expr, "<funcao>", "eval")
@@ -83,6 +84,7 @@ def ler_funcao(mensagem: str = "Digite f(x) (ex: x**3 - x - 2): ") -> Callable[[
                 escopo["x"] = x
                 return float(eval(_code, {"__builtins__": {}}, escopo))
 
+            f.expressao = expr
             return f
         except Exception as erro:
             print(f"  [!] Expressão inválida ({erro}). Tente novamente.")
@@ -122,20 +124,105 @@ def obter_sistema():
 def ler_pontos() -> tuple[list[float], list[float]]:
     n = ler_int("Quantidade de pontos: ", minimo=1)
     x, y = [], []
+    print("Digite um par x y por linha (ex: 1.5 2.7):")
     for i in range(n):
-        print(f"Ponto {i + 1}:")
-        x.append(ler_float("  x = "))
-        y.append(ler_float("  y = "))
+        while True:
+            entrada = input(f"  Ponto {i + 1}: ").strip().replace(",", ".").split()
+            if len(entrada) != 2:
+                print("  [!] Informe exatamente dois valores: x e y.")
+                continue
+            try:
+                xi, yi = map(float, entrada)
+                x.append(xi)
+                y.append(yi)
+                break
+            except ValueError:
+                print("  [!] Use números para x e y.")
     return x, y
+
+
+def formatar_numero(valor: float) -> str:
+    return f"{float(valor):.6g}"
+
+
+def formatar_vetor(vetor) -> str:
+    valores = np.asarray(vetor, dtype=float).ravel()
+    return "[" + ", ".join(formatar_numero(v) for v in valores) + "]"
+
+
+def formatar_matriz(matriz) -> str:
+    linhas = np.asarray(matriz, dtype=float)
+    if linhas.ndim != 2:
+        return str(matriz)
+    formatados = [[formatar_numero(v) for v in linha] for linha in linhas]
+    larguras = [max(len(linha[j]) for linha in formatados) for j in range(linhas.shape[1])]
+    return "\n".join(
+        "[ " + "  ".join(valor.rjust(larguras[j]) for j, valor in enumerate(linha)) + " ]"
+        for linha in formatados
+    )
+
+
+def imprimir_sistema(A, b) -> None:
+    print("\nSistema informado:")
+    print(f"A =\n{formatar_matriz(A)}")
+    print(f"b = {formatar_vetor(b)}")
+
+
+def imprimir_pontos(x, y) -> None:
+    print("\nPontos informados:")
+    print(f"{'i':>3}  {'x':>12}  {'y':>12}")
+    for i, (xi, yi) in enumerate(zip(x, y), start=1):
+        print(f"{i:>3}  {formatar_numero(xi):>12}  {formatar_numero(yi):>12}")
+
+
+def formatar_polinomio(coeficientes, ordem: str = "decrescente") -> str:
+    coeficientes = np.asarray(coeficientes, dtype=float).ravel()
+    termos = []
+    for i, coef in enumerate(coeficientes):
+        potencia = len(coeficientes) - i - 1 if ordem == "decrescente" else i
+        if np.isclose(coef, 0.0, atol=1e-14):
+            continue
+        magnitude = abs(coef)
+        if potencia == 0:
+            corpo = formatar_numero(magnitude)
+        elif potencia == 1:
+            corpo = ("" if np.isclose(magnitude, 1.0) else formatar_numero(magnitude)) + "x"
+        else:
+            corpo = ("" if np.isclose(magnitude, 1.0) else formatar_numero(magnitude)) + f"x^{potencia}"
+        if not termos:
+            termos.append(("-" if coef < 0 else "") + corpo)
+        else:
+            termos.append((" - " if coef < 0 else " + ") + corpo)
+    return "".join(termos) if termos else "0"
+
+
+def formatar_polinomio_newton(coeficientes, x_pontos) -> str:
+    termos = []
+    for i, coef in enumerate(np.asarray(coeficientes, dtype=float)):
+        if np.isclose(coef, 0.0, atol=1e-14):
+            continue
+        fatores = "".join(f"(x - ({formatar_numero(xi)}))" for xi in x_pontos[:i])
+        magnitude = abs(coef)
+        corpo = ("" if fatores and np.isclose(magnitude, 1.0) else formatar_numero(magnitude)) + fatores
+        if not fatores:
+            corpo = formatar_numero(magnitude)
+        if not termos:
+            termos.append(("-" if coef < 0 else "") + corpo)
+        else:
+            termos.append((" - " if coef < 0 else " + ") + corpo)
+    return "".join(termos) if termos else "0"
 
 
 def obter_pontos(titulo: str, exemplos: dict[str, list[tuple[float, float]]]):
     dados = escolher_dados(titulo, exemplos)
     if dados == "custom":
-        return ler_pontos()
-    if dados is None:
+        pontos = ler_pontos()
+    elif dados is None:
         return None
-    return [p[0] for p in dados], [p[1] for p in dados]
+    else:
+        pontos = [p[0] for p in dados], [p[1] for p in dados]
+    imprimir_pontos(*pontos)
+    return pontos
 
 
 def run_eliminacao_gauss() -> None:
@@ -143,7 +230,8 @@ def run_eliminacao_gauss() -> None:
     if dados is None:
         return
     A, b = dados
-    print(f"\nA = {A}\nb = {b}\nSolução: {gauss(A, b)}")
+    imprimir_sistema(A, b)
+    print(f"\nSolução x = {formatar_vetor(gauss(A, b))}")
 
 
 def run_fatoracao_lu() -> None:
@@ -152,7 +240,9 @@ def run_fatoracao_lu() -> None:
         return
     A, b = dados
     x, P, L, U = fatoracao_lu(A, b)
-    print(f"\nSolução: {x}\nP =\n{P}\nL =\n{L}\nU =\n{U}")
+    imprimir_sistema(A, b)
+    print(f"\nSolução x = {formatar_vetor(x)}")
+    print(f"\nP =\n{formatar_matriz(P)}\n\nL =\n{formatar_matriz(L)}\n\nU =\n{formatar_matriz(U)}")
 
 
 def run_gauss_jacobi() -> None:
@@ -160,11 +250,12 @@ def run_gauss_jacobi() -> None:
     if dados is None:
         return
     A, b = dados
+    imprimir_sistema(A, b)
     x0 = [0.0] * len(b)
     tolerancia = ler_float("Tolerância: ")
     max_iters = ler_int("Máximo de iterações: ", minimo=1)
     x, iteracoes, erro = gauss_jacobi(A, b, x0, tolerancia, max_iters)
-    print(f"\nSolução aproximada: {x}\nIterações: {iteracoes}\nErro: {erro}")
+    print(f"\nSolução aproximada x = {formatar_vetor(x)}\nIterações: {iteracoes}\nErro: {formatar_numero(erro)}")
 
 
 def run_mmq() -> None:
@@ -184,7 +275,8 @@ def run_mmq() -> None:
             break
         print(f"  [!] Grau incompatível: há {len(np.unique(x))} valores de x distintos; use um grau de 0 a {maior_grau}.")
     coeficientes = ajustar_curva(grau, np.asarray(x), np.asarray(y))
-    print(f"\nCoeficientes (maior para menor potência): {coeficientes}")
+    print(f"\nPolinômio ajustado: P(x) = {formatar_polinomio(coeficientes)}")
+    print(f"Coeficientes (maior para menor potência): {formatar_vetor(coeficientes)}")
 
 
 def run_interpolacao_definicao() -> None:
@@ -196,7 +288,8 @@ def run_interpolacao_definicao() -> None:
         return
     x, y = dados
     coeficientes = definicao(x, y)
-    print(f"\nCoeficientes (potências crescentes): {coeficientes}")
+    print(f"\nPolinômio interpolador: P(x) = {formatar_polinomio(coeficientes, ordem='crescente')}")
+    print(f"Coeficientes (potências crescentes): {formatar_vetor(coeficientes)}")
 
 
 def run_interpolacao_newton() -> None:
@@ -208,7 +301,8 @@ def run_interpolacao_newton() -> None:
         return
     x, y = dados
     coeficientes = diferencas_divididas(x, y)
-    print(f"\nCoeficientes de Newton: {coeficientes}")
+    print(f"\nPolinômio de Newton: P(x) = {formatar_polinomio_newton(coeficientes, x)}")
+    print(f"Coeficientes de diferenças divididas: {formatar_vetor(coeficientes)}")
     print(f"Valor interpolado no ponto médio: {avaliar_newton(x, coeficientes, (min(x) + max(x)) / 2):.8g}")
     from src._04_interpolacao.newton import plotar_interpolacao
     plotar_interpolacao(x, y, coeficientes)
@@ -216,14 +310,17 @@ def run_interpolacao_newton() -> None:
 
 def escolher_funcao_integracao():
     exemplos = {
-        "f(x) = x**2": lambda x: x**2,
-        "f(x) = sin(x)": math.sin,
-        "f(x) = exp(x)": math.exp,
+        "f(x) = x^2": ("x^2", lambda x: x**2),
+        "f(x) = sin(x)": ("sin(x)", math.sin),
+        "f(x) = exp(x)": ("exp(x)", math.exp),
     }
     dados = escolher_dados("Função a integrar", exemplos)
     if dados is None:
         return None
-    return ler_funcao() if dados == "custom" else dados
+    if dados == "custom":
+        func = ler_funcao("f(x) = ")
+        return func, func.expressao
+    return dados[1], dados[0]
 
 
 def run_trapezio() -> None:
@@ -231,13 +328,15 @@ def run_trapezio() -> None:
     if origem == -1:
         return
     if origem == 0:
-        func = escolher_funcao_integracao()
-        if func is None:
+        escolha_funcao = escolher_funcao_integracao()
+        if escolha_funcao is None:
             return
+        func, expressao = escolha_funcao
         a = ler_float("Limite a: ")
         b = ler_float("Limite b: ")
         n = ler_int("Número de subintervalos: ", minimo=1)
-        print(f"\nIntegral aproximada: {trapezio(func, a, b, n):.12g}")
+        print(f"\nFunção: f(x) = {expressao}\nIntervalo: [{formatar_numero(a)}, {formatar_numero(b)}], n = {n}")
+        print(f"Integral aproximada: {formatar_numero(trapezio(func, a, b, n))}")
         return
     valores = escolher_dados("Pontos tabelados", {
         "Pontos [(0, 0), (0.1, 0.2), (0.4, 0.8), (0.7, 1.4), (1, 2)]": [(0, 0), (0.1, 0.2), (0.4, 0.8), (0.7, 1.4), (1, 2)],
@@ -247,7 +346,8 @@ def run_trapezio() -> None:
         x, y = ler_pontos()
         valores = list(zip(x, y))
     if valores is not None:
-        print(f"\nIntegral aproximada: {trapezio_tabelado(valores):.12g}")
+        imprimir_pontos([p[0] for p in valores], [p[1] for p in valores])
+        print(f"Integral aproximada: {formatar_numero(trapezio_tabelado(valores))}")
 
 
 def run_simpson() -> None:
@@ -255,9 +355,10 @@ def run_simpson() -> None:
     if origem == -1:
         return
     if origem == 0:
-        func = escolher_funcao_integracao()
-        if func is None:
+        escolha_funcao = escolher_funcao_integracao()
+        if escolha_funcao is None:
             return
+        func, expressao = escolha_funcao
         a = ler_float("Limite a: ")
         b = ler_float("Limite b: ")
         while True:
@@ -265,7 +366,8 @@ def run_simpson() -> None:
             if n % 2 == 0:
                 break
             print("  [!] n deve ser par.")
-        print(f"\nIntegral aproximada: {simpson(func, a, b, n):.12g}")
+        print(f"\nFunção: f(x) = {expressao}\nIntervalo: [{formatar_numero(a)}, {formatar_numero(b)}], n = {n}")
+        print(f"Integral aproximada: {formatar_numero(simpson(func, a, b, n))}")
         return
     valores = escolher_dados("Pontos tabelados (número ímpar e espaçamento uniforme)", {
         "Pontos [(0, 0), (0.25, 0.0625), (0.5, 0.25), (0.75, 0.5625), (1, 1)]": [(0, 0), (0.25, 0.0625), (0.5, 0.25), (0.75, 0.5625), (1, 1)],
@@ -275,7 +377,8 @@ def run_simpson() -> None:
         x, y = ler_pontos()
         valores = list(zip(x, y))
     if valores is not None:
-        print(f"\nIntegral aproximada: {simpson_tabelado(valores):.12g}")
+        imprimir_pontos([p[0] for p in valores], [p[1] for p in valores])
+        print(f"Integral aproximada: {formatar_numero(simpson_tabelado(valores))}")
 
 
 OPCOES: list[MetodoItem] = [

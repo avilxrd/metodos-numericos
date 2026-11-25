@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 from src._02_sistemas_lineares.eliminacao_gauss import gauss
 
-# Recebe o grau de um polinômio e monta a matriz que 
-# será utilizada para os mínimos quadrados.
+# Recebe o grau de um polinômio e monta a matriz do sistema 
+# normal.
 def monta_matriz(grau: int, xi):
     if (grau < 0):
         raise ValueError("Não é aceito grau negativo.")
@@ -21,7 +21,7 @@ def monta_matriz(grau: int, xi):
     
     return A
    
-# 
+# Monta o vetor dos termos independentes do sistema normal.
 def monta_vetor(grau: int, xi, fxi):
     tamanho = grau + 1
     
@@ -78,17 +78,3 @@ def plotar_ajuste(x, y, coeficientes):
     fig.savefig("img/mmq.png", dpi=150, bbox_inches="tight")
     plt.show()
     plt.close(fig)
-
-def main():
-    x = np.array([1, 2, 3, 4, 5])
-    y = np.array([2, 3, 5, 4, 6])
-    
-    grau = 2
-    
-    coeficientes = ajustar_curva(grau, x, y)
-    
-    return 0
-
-
-if __name__ == "__main__":
-    main()

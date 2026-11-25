@@ -10,7 +10,7 @@
 - [x] Eliminação de Gauss
 - [x] Fatoração LU
 - [x] Gauss-Jacob
-<!-- - [ ] Gauss-Seidl (*) -->
+- [ ] Gauss-Seidl (*) 
 
 ### Ajuste de Curvas
 - [x] Polinomial
@@ -18,7 +18,7 @@
 ### Interpolação Polinomial
 - [x] Definição
 - [x] Polinômio de Newton
-<!-- - [ ] Polinômio de Lagrange (*) -->
+- [ ] Polinômio de Lagrange (*)
 
 ### Integração Numérica
 - [x] Trapézio

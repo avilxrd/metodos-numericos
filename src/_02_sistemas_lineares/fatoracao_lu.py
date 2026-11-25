@@ -29,10 +29,10 @@ def fatorar_lu(A, tolerancia=1e-12):
             if col > 0:
                 L[[col, linha_pivo], :col] = (L[[linha_pivo, col], :col])
         
-        for lin in range(col+1, n):
-            multiplicador = U[lin, col] / U[col, col]
-            L[lin, col]   = multiplicador
-            U[lin, col:] -= multiplicador * U[col, col:]
+        for row in range(col+1, n):
+            multiplicador = U[row, col] / U[col, col]
+            L[row, col]   = multiplicador
+            U[row, col:] -= multiplicador * U[col, col:]
     
     return P, L, U
     

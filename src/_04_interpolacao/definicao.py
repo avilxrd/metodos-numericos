@@ -46,15 +46,3 @@ def definicao(x, y):
     plotar_ajuste(x, y, coeficientes)
     
     return coeficientes
-
-# Interface de teste.
-def main():
-    x = [-1, 0, 1, 2]
-    y = [0, 1, 2, 9]
-
-    r = definicao(x, y)
-
-    print(r)
-
-if __name__ == "__main__":
-    main()

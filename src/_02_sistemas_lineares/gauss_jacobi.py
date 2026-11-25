@@ -1,7 +1,7 @@
 import numpy as np
 
 # Realiza as verificações necessárias para executar
-# o algorítmo de Gauss-Jacob
+# o algorítmo de Gauss-Jacobi.
 def verificar_matriz(A):
     A = np.asarray(A, dtype=float)
     
@@ -18,6 +18,10 @@ def iteracao(A, b, x_atual):
     n = len(b)
     x_novo = np.zeros(n)
     
+    # Isolar a variável da diagonal principal em cada linha.
+    # ex: a*x + b*y + c*z = res_1
+    #     soma = b * y_atual + c * z_atual
+    #     x0 = (res_1 - soma) / a
     for i in range(n):
         soma = 0.0
 
@@ -51,12 +55,14 @@ def gauss_jacobi(A, b, x_inicial, tolerancia=1e-10, max_iters=100):
     for i in range(1, max_iters+1):
         x_novo = iteracao(A, b, x)
         
+        # Calcula quanto a variável que mais mudou variou entre
+        # a iteração anterior e a atual (x - x_novo). -> Norma infinita.
         erro = np.linalg.norm(x_novo-x, ord=np.inf)
         
         if erro < tolerancia:
             return x_novo, i, erro
         
         x = x_novo
-
+        
     print(f"Atingiu o número máximo de iterações: {max_iters}")
     return x, max_iters, erro

@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
 # Recebe uma função. Calcula a integral numérica através
 # da fórmula vista em sala de aula.
 def trapezio(func, a: float, b: float, n: int):
@@ -43,21 +46,3 @@ def trapezio_tabelado(valores):
         integral += (h/2) * (y0 + y1)
 
     return integral
-
-# 
-def main():
-
-    dados = [
-        (0, 0),
-        (0.1, 0.2),
-        (0.4, 0.8),
-        (0.7, 1.4),
-        (1.0, 2.0)
-    ]
-
-    integral = trapezio_tabelado(dados)
-
-    print(f'Integral: {integral}')
-
-if __name__ == "__main__":
-    main()
