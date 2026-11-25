@@ -53,10 +53,24 @@ static bool isValid(double v)
 // metodos numericos para zeros de funcoes
 double bissecao(const std::function<double(double)>& f, double a, double b, double precision)
 {
-    //retorna um nan caso nao satisfaca o teorema de bolzano
-    if (satisfyBolzano(f, a, b) == false) { return nan(""); }
+    if (!isValid(a) || !isValid(b) || !isValid(precision) || precision <= 0 || a > b) {
+        return nan("");
+    }
 
-    int counter=1;
+    double fa = f(a);
+    double fb = f(b);
+
+    if (!isValid(fa) || !isValid(fb)) return nan("");
+
+    if (std::abs(fa) < precision) return a;
+    if (std::abs(fb) < precision) return b;
+
+    if ((fa > 0) == (fb > 0))
+    {
+        return nan("");
+    }
+
+    int counter = 1;
     double medio; 
 
     cout << "\n--- METODO DA BISSECAO ---" << endl;
@@ -85,11 +99,18 @@ double bissecao(const std::function<double(double)>& f, double a, double b, doub
              << endl;
 
         //verifica a parada do algoritmo
-        if ( (std::abs(b-a) <= precision) || (std::abs(fm) < precision) ) { break; }
-        if (counter > MAX_ITERS) { return nan(""); }
+        if (!isValid(fm)) return nan("");
+        if (std::abs(fm) < precision) return medio;
+        if (std::abs(b - a) <= precision) return medio;
+        if (counter >= MAX_ITERS) return nan("");
 
-        if ( satisfyBolzano(f, a, medio) == 1 ) { b = medio; }
-        else { a = medio; }
+        if ((fa > 0) != (fm > 0)) {
+            b = medio;
+            fb = fm;
+        } else {
+            a = medio;
+            fa = fm;
+        }
 
         counter++;
     } while (1);
@@ -99,14 +120,18 @@ double bissecao(const std::function<double(double)>& f, double a, double b, doub
 
 double falsaPosicao(const std::function<double(double)>& f, double a, double b, double precision_e1, double precision_e2)
 {
+    if (!isValid(a) || !isValid(b) || !isValid(precision_e1) || !isValid(precision_e2) ||
+        precision_e1 <= 0 || precision_e2 <= 0 || a > b) {
+        return nan("");
+    }
+
     double fa = f(a);
     double fb = f(b);
 
-    if ( std::abs(a-b) < precision_e1 )
-    {
-        if ( std::abs(fa) < precision_e2 ) { return a; }
-        else { return b; }
-    }
+    if (!isValid(fa) || !isValid(fb)) return nan("");
+    if (std::abs(fa) < precision_e2) return a;
+    if (std::abs(fb) < precision_e2) return b;
+    if ((fa > 0) == (fb > 0)) return nan("");
 
     int counter = 1;
     double x = nan("");
@@ -123,19 +148,16 @@ double falsaPosicao(const std::function<double(double)>& f, double a, double b, 
     cout << string(90, '-') << endl;
     do
     {
-        double fa = f(a);
-        double fb = f(b);
+        double denominador = fb - fa;
+        if (!isValid(denominador) || std::abs(denominador) < 1e-15) return nan("");
 
-        if ( std::abs(fb - fa) < 1e-15 ) { break; }
-
-        x = (a*fb - b*fa)/(fb-fa);
+        x = (a * fb - b * fa) / denominador;
         double fx = f(x);
 
-        if (std::isnan(x) || std::isnan(fx) || std::isinf(x) || std::isinf(fx))
+        if (!isValid(x) || !isValid(fx))
         {
             cerr << "nao convergiu" << endl;
-            x = nan("");
-            break;
+            return nan("");
         }
         
         cout << left 
@@ -146,23 +168,33 @@ double falsaPosicao(const std::function<double(double)>& f, double a, double b, 
              << setw(25) << scientific << setprecision(14) << fx
              << endl;
 
-        if (std::abs(fx) < precision_e2) { break; }
+        if (std::abs(fx) < precision_e2) return x;
 
-        if ( satisfyBolzano(f, a, x) ) { b = x; }
-        else { a = x; }
+        if ((fa > 0) != (fx > 0)) {
+            b = x;
+            fb = fx;
+        } else {
+            a = x;
+            fa = fx;
+        }
 
-        if (std::abs(a-b) < precision_e1) { break; }
-        if (counter >= MAX_ITERS) { break; }
+        if (std::abs(a - b) < precision_e1) return (a + b) / 2.0;
+        if (counter >= MAX_ITERS) return nan("");
         counter++;
     } while (1);
-
-    return x;
 }
 
 double newtonRaphson(const std::function<double(double)>& f, double x0, double precision_e1, double precision_e2)
 {
+    if (!isValid(x0) || !isValid(precision_e1) || !isValid(precision_e2) ||
+        precision_e1 <= 0 || precision_e2 <= 0) {
+        return nan("");
+    }
+
     double x = nan("");
     double fx0 = f(x0);
+
+    if (!isValid(fx0)) return nan("");
 
     cout << "\n--- METODO DE NEWTON-RAPHSON ---" << endl;
     cout << string(90, '-') << endl;
@@ -182,7 +214,7 @@ double newtonRaphson(const std::function<double(double)>& f, double x0, double p
     {
         double fx0_d = derivative(f, x0);
 
-        if (std::abs(fx0_d) < 1e-12) 
+        if (!isValid(fx0_d) || std::abs(fx0_d) < 1e-12)
         {
             cerr << "derivada nula ou proxima de zero" << endl;
             return x;
@@ -205,22 +237,29 @@ double newtonRaphson(const std::function<double(double)>& f, double x0, double p
              << setw(25) << scientific << setprecision(14) << fx
              << endl;
 
-        if (std::abs(fx) < precision_e1 || std::abs(x - x0) < precision_e2) { break; }
-        if (counter >= MAX_ITERS) { break; }
+        if (std::abs(fx) < precision_e1) return x;
+        if (std::abs(x - x0) < precision_e2) return nan("");
+        if (counter >= MAX_ITERS) return nan("");
         x0  = x;
         fx0 = fx;
         counter++;
     }
-    return x;
 }
 
 double secantes(const std::function<double(double)>& f, double a, double b, double precision_e1, double precision_e2)
 {
+    if (!isValid(a) || !isValid(b) || !isValid(precision_e1) || !isValid(precision_e2) ||
+        precision_e1 <= 0 || precision_e2 <= 0) {
+        return nan("");
+    }
+
     double fa = f(a);
     double fb = f(b);
 
-    if ( std::abs(fa) < precision_e1 ){ return a; }
-    if ( std::abs(fb) < precision_e1 || std::abs(b - a) < precision_e2 ){ return b; }
+    if (!isValid(fa) || !isValid(fb)) return nan("");
+    if (std::abs(fa) < precision_e1) return a;
+    if (std::abs(fb) < precision_e1) return b;
+    if (std::abs(b - a) < precision_e2) return nan("");
     
     int counter = 1;
     double x = b;
@@ -238,15 +277,16 @@ double secantes(const std::function<double(double)>& f, double a, double b, doub
 
     while(true)
     {
-        if ( std::abs(fb - fa) < 1e-15 ) { break; }
+        double denominador = fb - fa;
+        if (!isValid(denominador) || std::abs(denominador) < 1e-15) return nan("");
 
-        x  = b - ( (fb / (fb - fa)) * (b - a) );
+        x = b - (fb / denominador) * (b - a);
         double fx = f(x);
 
-        if (std::isnan(x) || std::isnan(fx) || std::isinf(x) || std::isinf(fx))
+        if (!isValid(x) || !isValid(fx))
         {
             cerr << "iteracao saiu do dominio da funcao" << endl;
-            break;
+            return nan("");
         }
 
         cout << left 
@@ -257,16 +297,16 @@ double secantes(const std::function<double(double)>& f, double a, double b, doub
              << setw(25) << scientific << setprecision(14) << fx
              << endl;
 
-        if ( std::abs(fx) < precision_e1 ||  std::abs(x - b) < precision_e2) { break; };
+        if (std::abs(fx) < precision_e1) return x;
+        if (std::abs(x - b) < precision_e2) return nan("");
 
         a = b;
         fa = fb;
 
         b = x;
         fb = fx;
-        if (counter >= MAX_ITERS) { break; }
+        if (counter >= MAX_ITERS) return nan("");
         counter++;
     }
-    return x;
 }
 

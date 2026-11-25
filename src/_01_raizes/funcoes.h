@@ -16,7 +16,6 @@ double funcao_e(double x);
 //funcoes auxiliares
 bool satisfyBolzano(const std::function<double(double)>& f, double a, double b);
 double derivative(const std::function<double(double)>& f, double x, double h = BASE_PRECISION);
-static bool isValid(double v);
 
 //metodos de zeros reais de funcoes reais
 double bissecao(const std::function<double(double)>& f, double a, double b, double precision=BASE_PRECISION);
