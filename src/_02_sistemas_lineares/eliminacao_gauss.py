@@ -57,8 +57,9 @@ def eliminacao_gauss(matriz, vetor_resultado=None):
     if np.isclose(A[-1, -1], 0.0, atol=1e-12):
         raise np.linalg.LinAlgError("A matriz é singular ou tem pivo nulo.")
 
-    # print(f"Matriz escalonada:\n {A}")
-    # print(f"Vetor resultante:    {b}")
+    print("\nResultado da eliminação de Gauss\n")
+    print(f"Matriz escalonada:\n {A}")
+    print(f"Vetor resultante:    {b}")
     return A, b
 
 def gauss(A, b):

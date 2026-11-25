@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Calcula as diferenças divididas.
 def diferencas_divididas(x: list[float], y: list[float]) -> np.ndarray:
@@ -32,28 +31,6 @@ def avaliar_newton(x_pontos: list[float], coeficientes: np.ndarray, valores):
     
     return resultado
 
-# Plota os pontos e o polinômio interpolador.
-def plotar_interpolacao(x, y, coeficientes):
-    fig, ax = plt.subplots()
-    x_curva = np.linspace(min(x), max(x), 100)
-    y_curva = avaliar_newton(x, coeficientes, x_curva)
-
-    ax.plot(x_curva, y_curva, color="red", label="Polinômio de Newton")
-    ax.scatter(x, y, label="Pontos tabelados", zorder=2)
-
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title("Interpolação pelo Polinômio de Newton")
-    ax.legend()
-    ax.grid(True)
-
-    fig.savefig("img/interpol_newton.png", dpi=150, bbox_inches="tight")
-    plt.show()
-    plt.close(fig)
-    
 # Interface para rodar o algoritmo completo.
 def newton(x, y):
-    coeficientes = diferencas_divididas(x, y)
-    plotar_interpolacao(x, y, coeficientes)
-
-    return coeficientes
+    return diferencas_divididas(x, y)

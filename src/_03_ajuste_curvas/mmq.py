@@ -1,6 +1,5 @@
 # Entrada:
 import numpy as np
-import matplotlib.pyplot as plt
 
 from src._02_sistemas_lineares.eliminacao_gauss import gauss
 
@@ -50,31 +49,4 @@ def ajustar_curva(grau: int, xi, fxi):
     A = monta_matriz(grau, xi)
     b = monta_vetor(grau, xi, fxi)    
     coeficientes = gauss(A, b)
-    plotar_ajuste(xi, fxi, coeficientes)
     return coeficientes
-
-# 
-def plotar_ajuste(x, y, coeficientes):
-    fig, ax = plt.subplots()
-
-    # Gera valores de X para desenhar a curva
-    x_curva = np.linspace(min(x), max(x), 100)
-
-    # Calcula os valores Y do polinômio
-    y_curva = np.polyval(coeficientes, x_curva)
-
-    # Pontos originais
-    ax.scatter(x, y, label="Pontos tabelados")
-
-    # Polinômio ajustado
-    ax.plot(x_curva, y_curva, color="red", label="Polinômio MMQ")
-
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title("Mínimos Quadrados")
-    ax.legend()
-    ax.grid(True)
-
-    fig.savefig("img/mmq.png", dpi=150, bbox_inches="tight")
-    plt.show()
-    plt.close(fig)

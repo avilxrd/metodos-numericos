@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import curses
 import math
+import textwrap
 from dataclasses import dataclass
 from typing import Callable
 
@@ -15,6 +16,15 @@ from src._04_interpolacao.definicao import definicao
 from src._04_interpolacao.newton import diferencas_divididas, avaliar_newton
 from src._05_integracao_numerica.trapezio import trapezio, trapezio_tabelado
 from src._05_integracao_numerica.simpson import simpson, simpson_tabelado
+from utils import (
+    plotar_ajuste_mmq,
+    plotar_interpolacao_definicao,
+    plotar_interpolacao_newton,
+    plotar_trapezio,
+    plotar_trapezio_tabelado,
+    plotar_simpson,
+    plotar_simpson_tabelado,
+)
 
 
 @dataclass(frozen=True)
@@ -45,15 +55,73 @@ def ler_int(mensagem: str, minimo: int | None = None) -> int:
 
 
 def escolher_opcao(titulo: str, opcoes: list[str]) -> int:
-    print(f"\n{titulo}")
-    for i, opcao in enumerate(opcoes, start=1):
-        print(f"  {i}) {opcao}")
-    print("  0) Voltar")
+    """Mostra uma lista navegável e retorna o índice, ou -1 para voltar."""
+    try:
+        return curses.wrapper(_menu_escolha_curses, titulo, opcoes)
+    except curses.error:
+        print(f"\n=== {titulo.upper()} ===")
+        for i, opcao in enumerate(opcoes, start=1):
+            print(f"  {i:>2}) {opcao}")
+        print("   0) Voltar")
+        while True:
+            escolha = ler_int("Selecione uma opção: ", minimo=0)
+            if escolha <= len(opcoes):
+                return escolha - 1
+            print(f"  [!] Escolha um número entre 0 e {len(opcoes)}.")
+
+
+def _menu_escolha_curses(stdscr: curses.window, titulo: str, opcoes: list[str]) -> int:
+    try:
+        curses.curs_set(0)
+    except curses.error:
+        pass
+    stdscr.keypad(True)
+    idx = 0
+    total = len(opcoes) + 1  # A última opção sempre retorna ao menu anterior.
     while True:
-        escolha = ler_int("Escolha: ", minimo=0)
-        if escolha <= len(opcoes):
-            return escolha - 1
-        print("  [!] Opção inexistente.")
+        stdscr.clear()
+        altura, largura = stdscr.getmaxyx()
+
+        def escrever(y: int, x: int, texto: str, estilo: int = curses.A_NORMAL) -> None:
+            if y < 0 or y >= altura or largura <= 1 or x >= largura - 1:
+                return
+            try:
+                stdscr.addnstr(y, x, texto, max(0, largura - x - 1), estilo)
+            except curses.error:
+                pass
+
+        escrever(0, 2, titulo.upper(), curses.A_BOLD)
+        escrever(1, 2, "↑/↓ navegar   Enter selecionar   Esc voltar", curses.A_DIM)
+        escrever(2, 2, "─" * max(0, largura - 5), curses.A_DIM)
+
+        largura_texto = max(10, largura - 8)
+        itens = [textwrap.wrap(opcao, width=largura_texto) or [""] for opcao in opcoes]
+        itens.append(["← Voltar"])
+        linhas_disponiveis = max(1, altura - 4)
+        inicio = idx
+        while inicio > 0 and sum(len(itens[i]) for i in range(inicio, idx + 1)) < linhas_disponiveis:
+            inicio -= 1
+        linha = 3
+        for i in range(inicio, total):
+            if linha + len(itens[i]) > altura - 1:
+                break
+            estilo = curses.A_REVERSE | curses.A_BOLD if i == idx else curses.A_NORMAL
+            for parte, texto in enumerate(itens[i]):
+                marcador = ("› " if i == idx else "  ") if parte == 0 else "  "
+                escrever(linha, 3, marcador + texto, estilo)
+                linha += 1
+        escrever(altura - 1, 2, f"{idx + 1}/{total}", curses.A_DIM)
+        stdscr.refresh()
+
+        tecla = stdscr.getch()
+        if tecla == curses.KEY_UP:
+            idx = (idx - 1) % total
+        elif tecla == curses.KEY_DOWN:
+            idx = (idx + 1) % total
+        elif tecla in (curses.KEY_ENTER, 10, 13):
+            return idx if idx < len(opcoes) else -1
+        elif tecla in (27, ord("q"), ord("Q")):
+            return -1
 
 
 def escolher_dados(titulo: str, exemplos: dict[str, object]):
@@ -112,13 +180,40 @@ def ler_sistema_linear() -> tuple[list[list[float]], list[float]]:
 
 def obter_sistema():
     exemplos = {
-        "A=[[4, 1, 1], [2, 5, 1], [1, 1, 3]], b=[6, 8, 4]": ([[4, 1, 1], [2, 5, 1], [1, 1, 3]], [6, 8, 4]),
-        "A=[[0, 2], [1, 3]], b=[4, 7] (pivotamento)": ([[0, 2], [1, 3]], [4, 7]),
+        "A=[[4, 1, 1], [2, 5, 1], [1, 1, 3]], b=[6, 8, 4] (3×3, diagonal dominante)":
+            ([[4, 1, 1], [2, 5, 1], [1, 1, 3]], [6, 8, 4]),
+        "A=[[0, 2], [1, 3]], b=[4, 7] (2×2, requer pivotamento)":
+            ([[0, 2], [1, 3]], [4, 7]),
+        "A=[[10, 1, 1, 1], [2, 12, 1, 1], [1, 2, 15, 1], [1, 1, 2, 18]], b=[13, 16, 19, 22] (4×4)": (
+            [[10, 1, 1, 1], [2, 12, 1, 1], [1, 2, 15, 1], [1, 1, 2, 18]],
+            [13, 16, 19, 22],
+        ),
     }
     dados = escolher_dados("Sistema linear", exemplos)
     if dados == "custom":
-        return ler_sistema_linear()
+        dados = ler_sistema_linear()
+    if dados is not None:
+        A, b = dados
+        imprimir_sistema(A, b)
     return dados
+
+
+# Mesmos conjuntos nos métodos que aceitam pontos (ajuste, interpolação e
+# integração tabelada). As abscissas uniformes também atendem Simpson 1/3.
+EXEMPLOS_PONTOS = {
+    "Pontos [(0, 0), (0.5, 0.25), (1, 1), (1.5, 2.25), (2, 4)] (y=x²)":
+        [(0, 0), (0.5, 0.25), (1, 1), (1.5, 2.25), (2, 4)],
+    "Pontos [(0, 1), (0.5, 2), (1, 3), (1.5, 4), (2, 5)] (y=2x+1)":
+        [(0, 1), (0.5, 2), (1, 3), (1.5, 4), (2, 5)],
+    "Pontos [(0, 1), (0.5, 1.4), (1, 2.2), (1.5, 3.1), (2, 5.2)] (dados aproximados)":
+        [(0, 1), (0.5, 1.4), (1, 2.2), (1.5, 3.1), (2, 5.2)],
+}
+
+
+def exemplos_pontos_integracao() -> dict[str, list[tuple[float, float]]]:
+    # Simpson exige quantidade ímpar de pontos, espaçamento uniforme; os
+    # conjuntos compartilhados satisfazem essas condições.
+    return EXEMPLOS_PONTOS
 
 
 def ler_pontos() -> tuple[list[float], list[float]]:
@@ -230,7 +325,6 @@ def run_eliminacao_gauss() -> None:
     if dados is None:
         return
     A, b = dados
-    imprimir_sistema(A, b)
     print(f"\nSolução x = {formatar_vetor(gauss(A, b))}")
 
 
@@ -240,7 +334,6 @@ def run_fatoracao_lu() -> None:
         return
     A, b = dados
     x, P, L, U = fatoracao_lu(A, b)
-    imprimir_sistema(A, b)
     print(f"\nSolução x = {formatar_vetor(x)}")
     print(f"\nP =\n{formatar_matriz(P)}\n\nL =\n{formatar_matriz(L)}\n\nU =\n{formatar_matriz(U)}")
 
@@ -250,7 +343,6 @@ def run_gauss_jacobi() -> None:
     if dados is None:
         return
     A, b = dados
-    imprimir_sistema(A, b)
     x0 = [0.0] * len(b)
     tolerancia = ler_float("Tolerância: ")
     max_iters = ler_int("Máximo de iterações: ", minimo=1)
@@ -259,9 +351,7 @@ def run_gauss_jacobi() -> None:
 
 
 def run_mmq() -> None:
-    dados = obter_pontos("Dados para mínimos quadrados", {
-        "Pontos [(1, 2), (2, 3), (3, 5), (4, 4), (5, 6)]": [(1, 2), (2, 3), (3, 5), (4, 4), (5, 6)],
-    })
+    dados = obter_pontos("Dados para mínimos quadrados", EXEMPLOS_PONTOS)
     if dados is None:
         return
     x, y = dados
@@ -277,26 +367,22 @@ def run_mmq() -> None:
     coeficientes = ajustar_curva(grau, np.asarray(x), np.asarray(y))
     print(f"\nPolinômio ajustado: P(x) = {formatar_polinomio(coeficientes)}")
     print(f"Coeficientes (maior para menor potência): {formatar_vetor(coeficientes)}")
+    plotar_ajuste_mmq(x, y, coeficientes)
 
 
 def run_interpolacao_definicao() -> None:
-    dados = obter_pontos("Pontos para interpolação", {
-        "Pontos [(-1, 0), (0, 1), (1, 2), (2, 9)]": [(-1, 0), (0, 1), (1, 2), (2, 9)],
-        "Pontos [(0, 1), (1, 2), (2, 5)]": [(0, 1), (1, 2), (2, 5)],
-    })
+    dados = obter_pontos("Pontos para interpolação", EXEMPLOS_PONTOS)
     if dados is None:
         return
     x, y = dados
     coeficientes = definicao(x, y)
     print(f"\nPolinômio interpolador: P(x) = {formatar_polinomio(coeficientes, ordem='crescente')}")
     print(f"Coeficientes (potências crescentes): {formatar_vetor(coeficientes)}")
+    plotar_interpolacao_definicao(x, y, coeficientes)
 
 
 def run_interpolacao_newton() -> None:
-    dados = obter_pontos("Pontos para interpolação", {
-        "Pontos [(-1, 0), (0, 1), (1, 2), (2, 9)]": [(-1, 0), (0, 1), (1, 2), (2, 9)],
-        "Pontos [(0, 1), (1, 2), (2, 5)]": [(0, 1), (1, 2), (2, 5)],
-    })
+    dados = obter_pontos("Pontos para interpolação", EXEMPLOS_PONTOS)
     if dados is None:
         return
     x, y = dados
@@ -304,15 +390,17 @@ def run_interpolacao_newton() -> None:
     print(f"\nPolinômio de Newton: P(x) = {formatar_polinomio_newton(coeficientes, x)}")
     print(f"Coeficientes de diferenças divididas: {formatar_vetor(coeficientes)}")
     print(f"Valor interpolado no ponto médio: {avaliar_newton(x, coeficientes, (min(x) + max(x)) / 2):.8g}")
-    from src._04_interpolacao.newton import plotar_interpolacao
-    plotar_interpolacao(x, y, coeficientes)
+    plotar_interpolacao_newton(x, y, coeficientes)
 
 
 def escolher_funcao_integracao():
     exemplos = {
-        "f(x) = x^2": ("x^2", lambda x: x**2),
-        "f(x) = sin(x)": ("sin(x)", math.sin),
-        "f(x) = exp(x)": ("exp(x)", math.exp),
+        "f(x) = x² (polinomial)": ("x**2", lambda x: x**2),
+        "f(x) = 2x + 1 (linear)": ("2*x + 1", lambda x: 2*x + 1),
+        "f(x) = sin(x) (seno)": ("sin(x)", math.sin),
+        "f(x) = cos(x) (cosseno)": ("cos(x)", math.cos),
+        "f(x) = exp(x) (exponencial)": ("exp(x)", math.exp),
+        "f(x) = 1/(1 + x²) (racional)": ("1 / (1 + x**2)", lambda x: 1 / (1 + x**2)),
     }
     dados = escolher_dados("Função a integrar", exemplos)
     if dados is None:
@@ -336,18 +424,20 @@ def run_trapezio() -> None:
         b = ler_float("Limite b: ")
         n = ler_int("Número de subintervalos: ", minimo=1)
         print(f"\nFunção: f(x) = {expressao}\nIntervalo: [{formatar_numero(a)}, {formatar_numero(b)}], n = {n}")
-        print(f"Integral aproximada: {formatar_numero(trapezio(func, a, b, n))}")
+        resultado = trapezio(func, a, b, n)
+        print(f"Integral aproximada: {formatar_numero(resultado)}")
+        plotar_trapezio(func, a, b, n)
         return
-    valores = escolher_dados("Pontos tabelados", {
-        "Pontos [(0, 0), (0.1, 0.2), (0.4, 0.8), (0.7, 1.4), (1, 2)]": [(0, 0), (0.1, 0.2), (0.4, 0.8), (0.7, 1.4), (1, 2)],
-        "Pontos [(0, 1), (0.5, 1.25), (1, 2)]": [(0, 1), (0.5, 1.25), (1, 2)],
-    })
+    valores = escolher_dados("Pontos tabelados", exemplos_pontos_integracao())
     if valores == "custom":
         x, y = ler_pontos()
         valores = list(zip(x, y))
     if valores is not None:
         imprimir_pontos([p[0] for p in valores], [p[1] for p in valores])
-        print(f"Integral aproximada: {formatar_numero(trapezio_tabelado(valores))}")
+        resultado = trapezio_tabelado(valores)
+        print(f"Integral aproximada: {formatar_numero(resultado)}")
+        if len(valores) >= 2:
+            plotar_trapezio_tabelado(valores)
 
 
 def run_simpson() -> None:
@@ -367,18 +457,19 @@ def run_simpson() -> None:
                 break
             print("  [!] n deve ser par.")
         print(f"\nFunção: f(x) = {expressao}\nIntervalo: [{formatar_numero(a)}, {formatar_numero(b)}], n = {n}")
-        print(f"Integral aproximada: {formatar_numero(simpson(func, a, b, n))}")
+        resultado = simpson(func, a, b, n)
+        print(f"Integral aproximada: {formatar_numero(resultado)}")
+        plotar_simpson(func, a, b, n)
         return
-    valores = escolher_dados("Pontos tabelados (número ímpar e espaçamento uniforme)", {
-        "Pontos [(0, 0), (0.25, 0.0625), (0.5, 0.25), (0.75, 0.5625), (1, 1)]": [(0, 0), (0.25, 0.0625), (0.5, 0.25), (0.75, 0.5625), (1, 1)],
-        "Pontos [(0, 1), (0.5, 1.25), (1, 2)]": [(0, 1), (0.5, 1.25), (1, 2)],
-    })
+    valores = escolher_dados("Pontos tabelados (espaçamento uniforme)", exemplos_pontos_integracao())
     if valores == "custom":
         x, y = ler_pontos()
         valores = list(zip(x, y))
     if valores is not None:
         imprimir_pontos([p[0] for p in valores], [p[1] for p in valores])
-        print(f"Integral aproximada: {formatar_numero(simpson_tabelado(valores))}")
+        resultado = simpson_tabelado(valores)
+        print(f"Integral aproximada: {formatar_numero(resultado)}")
+        plotar_simpson_tabelado(valores)
 
 
 OPCOES: list[MetodoItem] = [
@@ -395,26 +486,41 @@ OPCOES: list[MetodoItem] = [
 
 
 def _menu_curses(stdscr: curses.window) -> int | None:
-    curses.curs_set(0)
+    try:
+        curses.curs_set(0)
+    except curses.error:
+        pass
     stdscr.keypad(True)
     idx = 0
     while True:
         stdscr.clear()
         altura, largura = stdscr.getmaxyx()
         titulo = "MÉTODOS NUMÉRICOS"
-        subtitulo = "Use ↑ / ↓ para navegar, ENTER para selecionar, ESC ou q para sair"
-        stdscr.addstr(0, 2, titulo[:largura - 4], curses.A_BOLD)
-        if altura > 1:
-            stdscr.addstr(1, 2, subtitulo[:largura - 4], curses.A_DIM)
+        subtitulo = "↑/↓ navegar   Enter abrir   q sair"
+        # Evita curses.error em terminais estreitos ou com poucas linhas.
+        def escrever(y: int, x: int, texto: str, estilo: int = curses.A_NORMAL) -> None:
+            if y < 0 or y >= altura or largura <= 1 or x >= largura - 1:
+                return
+            try:
+                stdscr.addnstr(y, x, texto, max(0, largura - x - 1), estilo)
+            except curses.error:
+                pass
+
+        escrever(0, 2, titulo, curses.A_BOLD)
+        escrever(1, 2, subtitulo, curses.A_DIM)
+        escrever(2, 2, "─" * max(0, largura - 5), curses.A_DIM)
+
+        # Mostra a categoria junto da opção, sem consumir linhas extras.
         itens_visiveis = max(1, altura - 4)
         inicio = max(0, min(idx - itens_visiveis // 2, len(OPCOES) - itens_visiveis))
         fim = min(len(OPCOES), inicio + itens_visiveis)
         for linha, i in enumerate(range(inicio, fim), start=3):
             item = OPCOES[i]
-            marcador = "▶ " if i == idx else "  "
-            texto = f"{marcador}[{item.categoria}] {item.nome}"[:largura - 5]
+            marcador = "› " if i == idx else "  "
+            texto = f"{marcador}[{item.categoria}] {item.nome}"
             estilo = curses.A_REVERSE | curses.A_BOLD if i == idx else curses.A_NORMAL
-            stdscr.addstr(linha, 4, texto, estilo)
+            escrever(linha, 3, texto, estilo)
+        escrever(altura - 1, 2, f"{idx + 1}/{len(OPCOES)}", curses.A_DIM)
         stdscr.refresh()
         tecla = stdscr.getch()
         if tecla == curses.KEY_UP:
@@ -432,16 +538,26 @@ def main() -> None:
         try:
             selecionado = curses.wrapper(_menu_curses)
         except curses.error:
+            print("\n=== MÉTODOS NUMÉRICOS ===")
+            categoria_atual = None
             for i, item in enumerate(OPCOES, start=1):
-                print(f"{i}) [{item.categoria}] {item.nome}")
-            escolha = ler_int("Escolha o número: ", minimo=1)
-            selecionado = escolha - 1 if escolha <= len(OPCOES) else None
+                if item.categoria != categoria_atual:
+                    categoria_atual = item.categoria
+                    print(f"\n{categoria_atual}")
+                print(f"  {i:>2}) {item.nome}")
+            print("\n  0) Sair")
+            escolha = ler_int("Selecione uma opção: ", minimo=0)
+            while escolha > len(OPCOES):
+                print(f"  [!] Escolha um número entre 0 e {len(OPCOES)}.")
+                escolha = ler_int("Selecione uma opção: ", minimo=0)
+            selecionado = None if escolha == 0 else escolha - 1
 
         if selecionado is None or OPCOES[selecionado].nome == "Sair":
             print("Saindo...")
             break
 
         print("\033[2J\033[H", end="")
+        print(f"=== {OPCOES[selecionado].nome.upper()} ===\n")
         while True:
             try:
                 OPCOES[selecionado].acao()

@@ -1,7 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
-#
+# Regra composta 1/3 de Simpson para uma função.
 def simpson(func, a, b, n: int):
     if not isinstance(n, (int, np.integer)) or n < 2 or n % 2 != 0:
         raise ValueError("n deve ser um inteiro par >= 2.")
@@ -24,6 +23,8 @@ def simpson(func, a, b, n: int):
 
     return sinal * (h/3) * soma
 
+
+# Regra 1/3 de Simpson composta para valores tabelados uniformemente espaçados.
 def simpson_tabelado(valores):
     if len(valores) < 3:
         raise ValueError("Sao necessários ao menos 3 pontos.")

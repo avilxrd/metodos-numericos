@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 # Recebe uma função. Calcula a integral numérica através

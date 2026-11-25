@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from utils import resolver_triangular_superior, resolver_triangular_inferior
 
